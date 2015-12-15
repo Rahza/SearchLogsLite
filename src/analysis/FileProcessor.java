@@ -10,8 +10,11 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class FileProcessor {
+	private static final String SEPARATOR = ",";
+	private static final String SEPARATOR_REPLACEMENT = ".";
 	
-	private static final String HEADER = "sessionId,userId,query,position,url,rawdate,javaDate,lastInteraction,epoc\n";
+	private static final String HEADER = "sessionId" + SEPARATOR + "userId" + SEPARATOR + "query" + SEPARATOR + "position" + SEPARATOR + "url" + SEPARATOR + "rawdate" + SEPARATOR + "javaDate" + SEPARATOR + "lastInteraction" + SEPARATOR + "epoc\n";
+
 	private static final int SESSION_LENGTH = 1800000;
 	
 	private SimpleDateFormat dateFormat;
@@ -67,33 +70,44 @@ public class FileProcessor {
 			        if (parts.length > 3) {
 						position = Integer.parseInt(parts[3]);
 						url = parts[4];
-					}	        
+					}
 			        
 			        String dateString = parts[2];
 			        Date date = dateFormat.parse(dateString);
 			        String javaDate = date.toString();
 			        long epoc = date.getTime();
 			        
+			        long timeDifference = epoc - lastTime;
+			        
 			        if (userId != previousUser) {
 			        	previousUser = userId;
 			        	lastTime = epoc;
-			        	sessionId = -1;
-			        }
-			        
-			        long timeDifference = epoc - lastTime;
-			        lastTime = epoc;
-			        
-			        if (timeDifference > SESSION_LENGTH || sessionId < 0) {
+			        	
+			        	sessionId++;
+			        } else if (timeDifference > SESSION_LENGTH) {
 			        	sessionId++;
 			        }
 			        
-			        String result = sessionId + "," + userId + "," + query + "," + position + "," + url + "," + dateString + "," + javaDate + "," + timeDifference + "," + epoc + "\n";
+			        lastTime = epoc;
+			        
+			        query = checkSeparator(query);
+			        url = checkSeparator(url);
+			        
+			        String result = sessionId + SEPARATOR + userId + SEPARATOR + query + SEPARATOR + position + SEPARATOR + url + SEPARATOR + dateString + SEPARATOR + javaDate + SEPARATOR + timeDifference + SEPARATOR + epoc + "\n";
 			        writer.append(result);
 				} else {
 					active = true;
 				}
 			}
 		}
+	}
+	
+	private String checkSeparator(String input) {
+        if (input.contains(SEPARATOR)) {
+        	return input.replace(SEPARATOR, SEPARATOR_REPLACEMENT);
+        }
+        
+        return input;
 	}
 
 }
