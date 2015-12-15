@@ -35,7 +35,7 @@ query.freq = as.data.frame(query.table)$Freq
 hist(query.freq, breaks=100, freq=F)
 hist(query.freq[which(query.freq<21)], breaks=seq(0,20,1), freq=F)
 
-sort(query.table,decreasing=TRUE)[1:10] # Top X queries
+sort(query.table,decreasing=TRUE)[1:20] # Top X queries
 
 ############
 # Week 2.3 #
@@ -46,16 +46,15 @@ hist(sessions[which(sessions<16)], breaks=seq(0,15,1), freq=F)
 summary(sessions)
 
 # MISSING: Time of sessions?
-sessionIds = as.numeric(unique(queries$sessionId))
 sessions.time = data.frame(as.numeric(unique(queries$sessionId)))
-sessions.duration = apply(sessions.time, 1, get_session_duration)
+sessions.time$duration = tapply(queries$epoc, queries$sessionId, function(x) (max(x)-min(x))/1000)
 
-get_session_duration = function(id) {
-  print(id)
-  maxTime = max(queries$epoc[which(queries$sessionId == id)])
-  minTime = min(queries$epoc[which(queries$sessionId == id)])
-  return ((maxTime - minTime) / 1000) # difference in seconds
-}
+summary(sessions.time$duration)
+summary(sessions.time$duration[which(sessions.time$duration>0)])
+
+hist(sessions.time$duration, freq=F)
+hist(sessions.time$duration[which(sessions.time$duration<5000)], freq=F)
+
 
 ############
 # Week 2.4 #
