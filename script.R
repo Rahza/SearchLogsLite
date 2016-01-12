@@ -75,6 +75,24 @@ hist(position.data.clicks[which(position.data.clicks<30)], breaks=seq(0,30,1), f
 ############
 
 
+############
+# Week 3.1 #
+############
+library(dplyr)
+
+test = queries[,c("userId", "query", "epoc")]
+test = arrange(test, userId, query, epoc)
+
+testx = test %>% group_by(epoc) %>% mutate(timediff = epoc - lag(epoc, default = 0))
+View(testx)
+
+data %>% group_by(char1,char2,char3) %>% summarise(n(),sum(num))
+### http://stackoverflow.com/questions/21667262/how-to-find-difference-between-values-in-two-rows-in-an-r-dataframe-using-dplyr
+
+
+
+
+
 # MATRIX WORK
 queries$rday = format(queries$rdate,"%d %b %Y")
 dates=seq(min(queries$rdate),length.out=max(queries$rdate)-min(queries$rdate), by = "1 day")
