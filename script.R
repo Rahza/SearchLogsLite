@@ -81,12 +81,31 @@ hist(position.data.clicks[which(position.data.clicks<30)], breaks=seq(0,30,1), f
 library(dplyr)
 
 test = queries[,c("userId", "query", "epoc")]
-test = arrange(test, userId, query, epoc)
 
-testx = test %>% group_by(epoc) %>% mutate(timediff = epoc - lag(epoc, default = 0))
-View(testx)
+testx = test[test$query %in% test$ID[duplicated(test$ID)],]
 
-data %>% group_by(char1,char2,char3) %>% summarise(n(),sum(num))
+testx = test %>% group_by(userId, query) %>% filter(n()>1)
+testx = arrange(testx, userId, query, epoc)
+testx$id = rownames(testx)
+
+max_values = testx %>% group_by(userId, query) %>% filter(id == max(id))
+min_values = testx %>% group_by(userId, query) %>% filter(id == min(id))
+
+new_frame = data.frame(min_values[,c(1,2,4)], max_values$id)
+
+colnames(new_frame)[3:4] = c("min", "max")
+
+result = do.call(rbind, apply(new_frame[1:100,], 1, function(x) get_pairs(as.numeric(x["min"]), as.numeric(x["max"]))))
+rownames(result) = NULL
+
+get_pairs = function(min, max) {
+  left = min:(max-1)
+  right = (min+1):max
+  result = data.frame(left, right)
+  return (result)
+}
+
+
 ### http://stackoverflow.com/questions/21667262/how-to-find-difference-between-values-in-two-rows-in-an-r-dataframe-using-dplyr
 
 
