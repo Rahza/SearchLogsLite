@@ -79,23 +79,79 @@ hist(position.data.clicks[which(position.data.clicks<30)], breaks=seq(0,30,1), f
 # Week 3.1 #
 ############
 library(dplyr)
+querydata = queries[,c("userId", "query", "epoc")]
 
-test = queries[,c("userId", "query", "epoc")]
+duplicates = querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
+duplicates = querydata %>% group_by(userId, query) %>% filter(n()>1)
+duplicates = arrange(duplicates, userId, query, epoc)
+duplicates$id = as.numeric(rownames(duplicates))
+#duplicates = mutate(duplicates, diff = epoc-lag(epoc))
+duplicates = mutate(duplicates, diff = epoc-min(epoc))
 
-testx = test[test$query %in% test$ID[duplicated(test$ID)],]
+#shift = function(x, n){
+#  c(x[-(seq(n))], rep(NA, n))
+#}
 
-testx = test %>% group_by(userId, query) %>% filter(n()>1)
-testx = arrange(testx, userId, query, epoc)
-testx$id = rownames(testx)
+#duplicates$diff = shift(duplicates$diff, 1)
 
-max_values = testx %>% group_by(userId, query) %>% filter(id == max(id))
-min_values = testx %>% group_by(userId, query) %>% filter(id == min(id))
+max_values = duplicates %>% group_by(userId, query) %>% filter(id == max(id))
 
-new_frame = data.frame(min_values[,c(1,2,4)], max_values$id)
+maxid = max(duplicates$id)
 
-colnames(new_frame)[3:4] = c("min", "max")
+result = data.frame(
+  left = 1:(maxid-1),
+  right = 2:maxid,
+  diff = head(duplicates$diff, -1)
+)
 
-result = do.call(rbind, apply(new_frame[1:100,], 1, function(x) get_pairs(as.numeric(x["min"]), as.numeric(x["max"]))))
+result = subset(result, ! left %in% max_values$id)
+result = mutate(result, days = round(diff / (1000*60*60*24)))
+
+hist(result$diff, breaks=100, freq=F)
+hist(result$diff[which(result$diff>0 & result$diff<1000000)], breaks=500, freq=F)
+
+hist(result$days, breaks=100, freq=F)
+hist(result$days[which(result$days>0)], breaks=100, freq=F)
+
+##################
+# Week 3.1 (OLD) #
+##################
+library(dplyr)
+
+querydata = queries[,c("userId", "query", "epoc")]
+
+duplicates = querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
+
+duplicates = querydata %>% group_by(userId, query) %>% filter(n()>1)
+duplicates = arrange(duplicates, userId, query, epoc)
+duplicates$id = as.numeric(rownames(duplicates))
+
+max_values = duplicates %>% group_by(userId, query) %>% filter(id == max(id))
+min_values = duplicates %>% group_by(userId, query) %>% filter(id == min(id))
+
+querypairs = data.frame(min_values[,c(1,2,4)], max_values$id)
+
+colnames(querypairs)[3:4] = c("min", "max")
+
+duplicates = mutate(duplicates, diff = epoc-lag(epoc))
+
+shift = function(x, n){
+  c(x[-(seq(n))], rep(NA, n))
+}
+
+duplicates$diff = shift(duplicates$diff, 1)
+
+maxid = max(duplicates$id)
+
+result = data.frame(
+  left = 1:(maxid-1),
+  right = 2:maxid,
+  diff = head(duplicates$diff, -1)
+)
+
+result = subset(result, ! left %in% querypairs$max)
+
+result = do.call(rbind, apply(querypairs, 1, function(x) get_pairs(as.numeric(x["min"]), as.numeric(x["max"]))))
 rownames(result) = NULL
 
 get_pairs = function(min, max) {
