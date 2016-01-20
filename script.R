@@ -94,6 +94,8 @@ duplicates$id = as.numeric(rownames(duplicates))
 duplicates = mutate(duplicates, diff = epoc-lag(epoc)) # difference between queries
 # duplicates = mutate(duplicates, diff = epoc-min(epoc))  # difference to first query
 
+duplicates = duplicates %>% filter(diff > 0)
+
 max_values = duplicates %>% group_by(userId, query) %>% filter(id == max(id))
 maxid = max(duplicates$id)
 
@@ -102,7 +104,7 @@ result = data.frame(left = 1:(maxid-1), right = 2:maxid, diff = tail(duplicates$
 result = subset(result, ! left %in% max_values$id)
 result = mutate(result, days = round(diff / (1000*60*60*24)))
 
-result.table = table(result$days[which(result$days>0)])
+result.table = table(result$days[which(result$days>0 | result$days == NA)])
 plot(result.table, type="p")
 
 ############
