@@ -78,40 +78,40 @@ hist(position.data.clicks[which(position.data.clicks<30)], breaks=seq(0,30,1), f
 ############
 # Week 3.1 #
 ############
+
+#### TODO: Queries mit exakt gleicher Zeit nur einmal 
+#### Letztes query immer matchen mit zufälligem zwischen min und max
+
 library(dplyr)
 querydata = queries[,c("userId", "query", "epoc")]
 
-duplicates = querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
+querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
+
 duplicates = querydata %>% group_by(userId, query) %>% filter(n()>1)
 duplicates = arrange(duplicates, userId, query, epoc)
 duplicates$id = as.numeric(rownames(duplicates))
-#duplicates = mutate(duplicates, diff = epoc-lag(epoc))
-duplicates = mutate(duplicates, diff = epoc-min(epoc))
 
-#shift = function(x, n){
-#  c(x[-(seq(n))], rep(NA, n))
-#}
-
-#duplicates$diff = shift(duplicates$diff, 1)
+duplicates = mutate(duplicates, diff = epoc-lag(epoc)) # difference between queries
+# duplicates = mutate(duplicates, diff = epoc-min(epoc))  # difference to first query
 
 max_values = duplicates %>% group_by(userId, query) %>% filter(id == max(id))
-
 maxid = max(duplicates$id)
 
-result = data.frame(
-  left = 1:(maxid-1),
-  right = 2:maxid,
-  diff = head(duplicates$diff, -1)
-)
+result = data.frame(left = 1:(maxid-1), right = 2:maxid, diff = tail(duplicates$diff, -1))
 
 result = subset(result, ! left %in% max_values$id)
 result = mutate(result, days = round(diff / (1000*60*60*24)))
 
-hist(result$diff, breaks=100, freq=F)
-hist(result$diff[which(result$diff>0 & result$diff<1000000)], breaks=500, freq=F)
+result.table = table(result$days[which(result$days>0)])
+plot(result.table, type="p")
 
-hist(result$days, breaks=100, freq=F)
-hist(result$days[which(result$days>0)], breaks=100, freq=F)
+############
+# Week 3.2 #
+############
+uniques = querydata %>% group_by(userId, query) %>% filter(n()==1)
+uniques$id = as.numeric(rownames(uniques))
+uniques = uniques %>% mutate(pair = sample(querydata$id[which(duplicates$userId == userId)], 1))
+
 
 ##################
 # Week 3.1 (OLD) #
@@ -160,11 +160,6 @@ get_pairs = function(min, max) {
   result = data.frame(left, right)
   return (result)
 }
-
-
-### http://stackoverflow.com/questions/21667262/how-to-find-difference-between-values-in-two-rows-in-an-r-dataframe-using-dplyr
-
-
 
 
 
