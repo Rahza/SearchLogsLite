@@ -78,14 +78,19 @@ hist(position.data.clicks[which(position.data.clicks<30)], breaks=seq(0,30,1), f
 ############
 # Week 3.1 #
 ############
+library(dplyr)
+all.queries = queries %>% arrange(userId, query, epoc)
+all.queries$id = as.numeric(rownames(all.queries))
+all.queries = all.queries %>% group_by(userId, query) %>% mutate(diff = epoc-lag(epoc))
+all.queries = all.queries %>% group_by(userId, query, epoc) %>% mutate(id = min(id))
+
 
 #### TODO: Queries mit exakt gleicher Zeit nur einmal 
 #### Letztes query immer matchen mit zufälligem zwischen min und max
 
-library(dplyr)
 querydata = queries[,c("userId", "query", "epoc")]
 
-querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
+# querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
 
 duplicates = querydata %>% group_by(userId, query) %>% filter(n()>1)
 duplicates = arrange(duplicates, userId, query, epoc)
@@ -94,14 +99,22 @@ duplicates$id = as.numeric(rownames(duplicates))
 duplicates = mutate(duplicates, diff = epoc-lag(epoc)) # difference between queries
 # duplicates = mutate(duplicates, diff = epoc-min(epoc))  # difference to first query
 
-duplicates = duplicates %>% filter(diff > 0)
+multiple.click.ids = (duplicates %>% filter(diff == 0))$id
+duplicates = subset(duplicates, ! id %in% multiple.click.ids)
 
 max_values = duplicates %>% group_by(userId, query) %>% filter(id == max(id))
-maxid = max(duplicates$id)
+remove_values = c(max_values$id, multiple.click.ids)
 
-result = data.frame(left = 1:(maxid-1), right = 2:maxid, diff = tail(duplicates$diff, -1))
+# maxid = max(duplicates$id)
+maxid = as.numeric(count(duplicates))
 
-result = subset(result, ! left %in% max_values$id)
+duplicates$diff = c(tail(duplicates$diff, -1), 0)
+duplicates = subset(duplicates, ! id %in% max_values)
+
+result = data.frame(left = 1:(maxid-1), right = 2:maxid)
+
+result = subset(result, ! left %in% remove_values)
+result = mutate(result, diff = tail(duplicates$diff, -1))
 result = mutate(result, days = round(diff / (1000*60*60*24)))
 
 result.table = table(result$days[which(result$days>0 | result$days == NA)])
@@ -110,10 +123,21 @@ plot(result.table, type="p")
 ############
 # Week 3.2 #
 ############
-uniques = querydata %>% group_by(userId, query) %>% filter(n()==1)
-uniques$id = as.numeric(rownames(uniques))
-uniques = uniques %>% mutate(pair = sample(querydata$id[which(duplicates$userId == userId)], 1))
+all.queries = queries[,c("userId", "query", "url", "epoc")]
+all.queries$id = as.numeric(rownames(all.queries))
 
+all.queries = mutate(all.queries, diff = epoc-lag(epoc))
+## don't delete false positives
+all.queries = all.queries %>% filter(diff > 0) # remove queries with diff 0
+
+duplicates = all.queries %>% group_by(userId, query) %>% filter(n()>1)
+duplicates.count = count(duplicates)
+
+uniques = uniques %>% mutate(pair = sample(querydata$id[which(querydata$userId == userId)], 1))
+uniques = querydata %>% group_by(userId, query) %>% filter(n()==1)
+
+
+single_values = uniques$id
 
 ##################
 # Week 3.1 (OLD) #
