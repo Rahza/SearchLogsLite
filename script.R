@@ -78,26 +78,38 @@ hist(position.data.clicks[which(position.data.clicks<30)], breaks=seq(0,30,1), f
 ############
 # Week 3.1 #
 ############
-library(dplyr)
-all.queries = queries %>% arrange(userId, query, epoc)
-all.queries$id = as.numeric(rownames(all.queries))
-all.queries = all.queries %>% group_by(userId, query) %>% mutate(diff = epoc-lag(epoc))
-all.queries = all.queries %>% group_by(userId, query, epoc) %>% mutate(id = min(id))
-
 
 #### TODO: Queries mit exakt gleicher Zeit nur einmal 
 #### Letztes query immer matchen mit zufälligem zwischen min und max
 
-querydata = queries[,c("userId", "query", "epoc")]
 
-# querydata[querydata$query %in% querydata$ID[duplicated(querydata$ID)],]
+library(dplyr)
 
-duplicates = querydata %>% group_by(userId, query) %>% filter(n()>1)
-duplicates = arrange(duplicates, userId, query, epoc)
-duplicates$id = as.numeric(rownames(duplicates))
+all.queries = queries %>% arrange(userId, query, epoc) # sort all queries by userId, query and epoc
+all.queries$id = as.numeric(rownames(all.queries)) # create id column
+all.queries = all.queries %>% group_by(userId, query) %>% mutate(diff = epoc-lag(epoc)) # calculate the difference in time between the same queries
 
-duplicates = mutate(duplicates, diff = epoc-lag(epoc)) # difference between queries
+# duplicates = mutate(duplicates, diff = epoc-lag(epoc)) # difference between queries
 # duplicates = mutate(duplicates, diff = epoc-min(epoc))  # difference to first query
+
+all.queries = all.queries %>% group_by(userId, query, epoc) %>% mutate(id = min(id)) # unique ID for queries with multiple result clicks (same query by the same user at the same time)
+
+querydata = all.queries[,c("id", "userId", "query", "epoc", "diff")] # new dataframe with only the relevant columns 
+duplicates = querydata %>% filter(diff>0 | is.na(diff)) # remove multiple occurences of queries with multiple result clicks
+duplicates = duplicates %>% group_by(userId, query) %>% filter(n()>1) # new dataframe with only duplicate queries
+duplicates = duplicates %>% group_by(userId, query) %>% mutate(min = min(id))
+
+result = data.frame(left = duplicates$id, right = c(tail(duplicates$id, -1), 0), diff = c(tail(duplicates$diff, -1), 0), min = duplicates$min) # match each duplicate query with the subsequent query
+result$right = apply(result, 1, function(x) if(is.na(x["diff"])) get_match(x["min"], x["left"]) else return (x["right"]))
+
+unmachted = result[which(is.na(result$diff)),]
+
+unmatched$right = apply(unmatched, 1, function(x) get_match(x["min"], x["left"]))
+
+get_match = function(min, max) {
+  x = min:(max-1)
+  return (x[sample(length(x), 1)])
+}
 
 multiple.click.ids = (duplicates %>% filter(diff == 0))$id
 duplicates = subset(duplicates, ! id %in% multiple.click.ids)
@@ -111,7 +123,7 @@ maxid = as.numeric(count(duplicates))
 duplicates$diff = c(tail(duplicates$diff, -1), 0)
 duplicates = subset(duplicates, ! id %in% max_values)
 
-result = data.frame(left = 1:(maxid-1), right = 2:maxid)
+
 
 result = subset(result, ! left %in% remove_values)
 result = mutate(result, diff = tail(duplicates$diff, -1))
