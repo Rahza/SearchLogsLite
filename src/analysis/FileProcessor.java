@@ -65,7 +65,7 @@ public class FileProcessor {
 			        String query = parts[1];
 			        
 			        int position = -1;
-			        String url = "";
+			        String url = "na";
 			        
 			        if (parts.length > 3) {
 						position = Integer.parseInt(parts[3]);
