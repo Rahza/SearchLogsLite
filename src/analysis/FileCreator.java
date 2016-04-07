@@ -9,7 +9,7 @@ import java.util.List;
 public class FileCreator {
 
 	private final static String INPUT_FOLDER = "C:\\SearchLogs\\logs";	
-	private final static String OUTPUT_FILE_NAME = "C:\\SearchLogs\\output\\outputx.csv";
+	private final static String OUTPUT_FILE_NAME = "C:\\SearchLogs\\output\\output_session10.csv";
 	private final static String MATRIX_OUTPUT_FILE_NAME = "C:\\SearchLogs\\output\\matrix.csv";
 	private final static String INTERACTIONS_OUTPUT_FILE_NAME = "C:\\SearchLogs\\output\\interactions.csv";
 	

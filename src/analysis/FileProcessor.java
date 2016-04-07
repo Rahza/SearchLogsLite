@@ -21,7 +21,8 @@ public class FileProcessor {
 	private static final String HEADER = "sessionId" + SEPARATOR + "userId" + SEPARATOR + "query" + SEPARATOR + "position" + SEPARATOR + "url" + SEPARATOR + "rawdate" + SEPARATOR + "javaDate" + SEPARATOR + "lastInteraction" + SEPARATOR + "epoc\n";
 
 	// Length of a session in milliseconds (if the user has not issued a query after this time, the session is considered to be over)
-	private static final int SESSION_LENGTH = 1800000;
+	// private static final int SESSION_LENGTH = 1800000;
+	private static final int SESSION_LENGTH = 600000;
 	
 	private SimpleDateFormat dateFormat;
 	
@@ -72,6 +73,7 @@ public class FileProcessor {
 			int previousUser = -1;
 			long lastTime = -1;
 			int sessionId = -1;
+			boolean dayLightTimeSwitch = false;
 			
 			// Go through the file line by line
 			for(String line; (line = br.readLine()) != null;) {
